@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import ChipList from './chiplist';
+import { useEffect, useState } from "react";
+import ChipList from "./chiplist";
 
 export default function Home() {
   const [data, setData] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/get-logs`)
-      .then(res => res.json())
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/data`)
+      .then((res) => res.json())
       .then(setData)
-      .catch(err => console.error('Fetch error:', err));
+      .catch((err) => console.error("Fetch error:", err));
   }, []);
 
   return (
@@ -23,7 +23,8 @@ export default function Home() {
       <ul className="list-disc list-inside">
         {data.map((item, i) => (
           <li key={i}>
-            <strong>{item.chip_id}</strong> — {new Date(item.timestamp).toLocaleString()}
+            <strong>{item.chip_id}</strong> —{" "}
+            {new Date(item.timestamp).toLocaleString()}
           </li>
         ))}
       </ul>
