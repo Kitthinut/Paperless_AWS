@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import ChipList from "@/components/chiplist";
+import ChipList from "../components/chiplist";
 
 export default function Home() {
   const [data, setData] = useState<any[]>([]);
