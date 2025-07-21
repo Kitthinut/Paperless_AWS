@@ -14,23 +14,36 @@ export default function SettingsPage() {
 
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/data`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
+      })
       .then((fetchedData: ChipData[]) => {
-        // Use a Map to keep only unique chip_ids, last occurrence wins
-        const uniqueMap = new Map<string, ChipData>();
-        fetchedData.forEach((item) => uniqueMap.set(item.chip_id, item));
+        if (Array.isArray(fetchedData)) {
+          // Use a Map to keep only unique chip_ids, last occurrence wins
+          const uniqueMap = new Map<string, ChipData>();
+          fetchedData.forEach((item) => uniqueMap.set(item.chip_id, item));
 
-        const uniqueData = Array.from(uniqueMap.values());
-        setData(uniqueData);
+          const uniqueData = Array.from(uniqueMap.values());
+          setData(uniqueData);
 
-        const initialNames: Record<string, string> = {};
-        uniqueData.forEach((item) => {
-          initialNames[item.chip_id] = item.name || "";
-        });
-        setNames(initialNames);
+          const initialNames: Record<string, string> = {};
+          uniqueData.forEach((item) => {
+            initialNames[item.chip_id] = item.name || "";
+          });
+          setNames(initialNames);
+        } else {
+            console.error("API returned non-array data for /data:", fetchedData);
+            setData([]); // Ensure 'data' is an array
+            setNames({}); // Ensure names object is reset
+        }
       })
       .catch((err) => {
         console.error("Failed to fetch chip data:", err);
+        setData([]); // On error, ensure 'data' is an empty array
+        setNames({}); // Ensure names object is reset
       });
   }, []);
 
@@ -58,7 +71,8 @@ export default function SettingsPage() {
 
   return (
     <main className="p-6 bg-green-50 min-h-screen text-black">
-      <h1 className="text-3xl font-bold mb-6">⚙️ Settings</h1>
+      {/* Changed the text content of the h1 tag here */}
+      <h1 className="text-3xl font-bold mb-6">Chip Name Configuration</h1> 
 
       <div className="overflow-x-auto">
         <table className="min-w-full border border-gray-300 rounded-lg bg-white text-black text-left">
