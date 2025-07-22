@@ -4,7 +4,9 @@
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 
-const ChipList = dynamic(() => import("../components/chiplist"), { ssr: false });
+const ChipList = dynamic(() => import("../components/chiplist"), {
+  ssr: false,
+});
 
 // Define the type for the log data coming from your /data endpoint
 type ChipLogData = {
@@ -43,12 +45,17 @@ export default function DashboardPage() {
 
       // Fetch chip names from your /names endpoint
       const namesRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/names`, {
-        cache: "no-store", // Crucial for fresh names
+        cache: "no-store",
       });
-      if (!namesRes.ok) {
-        throw new Error(`HTTP error! status: ${namesRes.status} from /names`);
-      }
-      const chipNames: ChipNameData[] = await namesRes.json();
+      const namesPayload = await namesRes.json();
+
+      // If it's wrapped like: { body: '[{...}]' }, parse the inner string
+      const chipNames: ChipNameData[] =
+        typeof namesPayload.body === "string"
+          ? JSON.parse(namesPayload.body)
+          : namesPayload.body;
+
+      console.log("Parsed chipNames:", chipNames);
       console.log("Fetched Chip Names:", chipNames);
 
       // Create a map for quick lookup of names by chip_id
@@ -63,7 +70,9 @@ export default function DashboardPage() {
       if (Array.isArray(logs)) {
         const mergedData = logs.map((log) => ({
           ...log,
-          name: nameMap.get(log.chip_id.toLowerCase()) || `Unknown Chip (${log.chip_id})`,
+          name:
+            nameMap.get(log.chip_id.toLowerCase()) ||
+            `Unknown Chip (${log.chip_id})`,
         }));
         setData(mergedData);
         console.log("Merged Data for ChipList:", mergedData);
