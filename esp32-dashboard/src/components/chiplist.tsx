@@ -11,6 +11,7 @@ type ChipData = {
 
 export default function ChipList({ data }: { data: ChipData[] }) {
   const [chipData, setData] = useState<ChipData[]>(data);
+  const [deleting, setDeleting] = useState<string | null>(null); // Track currently deleting item
 
   useEffect(() => {
     setData(data);
@@ -25,14 +26,12 @@ export default function ChipList({ data }: { data: ChipData[] }) {
     );
   }
 
-  // Group entries by chip_id
   const grouped = chipData.reduce((acc, item) => {
     if (!acc[item.chip_id]) acc[item.chip_id] = [];
     acc[item.chip_id].push(item);
     return acc;
   }, {} as Record<string, ChipData[]>);
 
-  // Handler: Delete log entry
   const handleDeleteItem = async (chipId: string, timestamp: number) => {
     if (
       !window.confirm(
@@ -41,47 +40,37 @@ export default function ChipList({ data }: { data: ChipData[] }) {
         ).toLocaleString()}?`
       )
     ) {
-      return; // User cancelled
+      return;
     }
 
+    const idKey = `${chipId}-${timestamp}`;
     try {
-      // Construct the DELETE request URL with chip_id and timestamp as query parameters
-      const deleteUrl = `${
-        process.env.NEXT_PUBLIC_API_URL
-      }/logs?chip_id=${encodeURIComponent(chipId)}&timestamp=${timestamp}`;
+      setDeleting(idKey);
 
+      const deleteUrl = `${process.env.NEXT_PUBLIC_API_URL}/data?chip_id=${encodeURIComponent(chipId)}&timestamp=${timestamp}`;
       const res = await fetch(deleteUrl, {
         method: "DELETE",
       });
 
       if (!res.ok) {
-        // Attempt to parse error message from response body
-        const errorData = await res
-          .json()
-          .catch(() => ({ message: "Unknown error" }));
-        throw new Error(
-          errorData.message ||
-            `Failed to delete log entry. Status: ${res.status}`
-        );
+        const errorData = await res.json().catch(() => ({ message: "Unknown error" }));
+        throw new Error(errorData.message || `Failed to delete log entry. Status: ${res.status}`);
       }
 
       alert("Log entry deleted successfully.");
-
-      // Optimistically update the UI by removing the deleted item from local state
       setData((prevData) =>
         prevData.filter(
-          (entry) =>
-            !(entry.chip_id === chipId && entry.timestamp === timestamp)
+          (entry) => !(entry.chip_id === chipId && entry.timestamp === timestamp)
         )
       );
-
     } catch (error: any) {
       console.error("Failed to delete log entry:", error);
       alert(`Error deleting log entry: ${error.message}`);
+    } finally {
+      setDeleting(null);
     }
   };
 
-  // Handler: Export log entry to PDF
   const handleExportToPDF = (chipId: string, timestamp: number) => {
     console.log(`Exporting to PDF: ChipID=${chipId}, Timestamp=${timestamp}`);
     alert("Export to PDF functionality not yet implemented.");
@@ -105,10 +94,7 @@ export default function ChipList({ data }: { data: ChipData[] }) {
             chipName.endsWith("s") ? "'" : "'s"
           } Table (${chip_id})`;
 
-          // Debug output
-          console.log(
-            `Rendering chip table for ${chip_id} → name: ${chipName}`
-          );
+          console.log(`Rendering chip table for ${chip_id} → name: ${chipName}`);
           console.log(entries);
 
           return (
@@ -145,6 +131,9 @@ export default function ChipList({ data }: { data: ChipData[] }) {
                         .toString()
                         .padStart(2, "0")}`;
 
+                      const idKey = `${entry.chip_id}-${entry.timestamp}`;
+                      const isDeleting = deleting === idKey;
+
                       return (
                         <tr key={i} className="bg-white hover:bg-green-50">
                           <td className="border p-2">{formattedDate}</td>
@@ -158,9 +147,14 @@ export default function ChipList({ data }: { data: ChipData[] }) {
                                     entry.timestamp
                                   )
                                 }
-                                className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs"
+                                disabled={isDeleting}
+                                className={`${
+                                  isDeleting
+                                    ? "bg-gray-400 cursor-not-allowed"
+                                    : "bg-red-500 hover:bg-red-600"
+                                } text-white px-2 py-1 rounded text-xs`}
                               >
-                                Delete
+                                {isDeleting ? "Deleting..." : "Delete"}
                               </button>
                               <button
                                 onClick={() =>
