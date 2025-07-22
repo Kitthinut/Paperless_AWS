@@ -1,6 +1,8 @@
+// app/settings/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from 'next/navigation'; // Import useRouter
 
 type ChipData = {
   chip_id: string;
@@ -11,6 +13,7 @@ export default function SettingsPage() {
   const [data, setData] = useState<ChipData[]>([]);
   const [names, setNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState<string | null>(null);
+  const router = useRouter(); // Initialize router here
 
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/data`)
@@ -22,7 +25,6 @@ export default function SettingsPage() {
       })
       .then((fetchedData: ChipData[]) => {
         if (Array.isArray(fetchedData)) {
-          // Use a Map to keep only unique chip_ids, last occurrence wins
           const uniqueMap = new Map<string, ChipData>();
           fetchedData.forEach((item) => uniqueMap.set(item.chip_id, item));
 
@@ -36,14 +38,14 @@ export default function SettingsPage() {
           setNames(initialNames);
         } else {
             console.error("API returned non-array data for /data:", fetchedData);
-            setData([]); // Ensure 'data' is an array
-            setNames({}); // Ensure names object is reset
+            setData([]);
+            setNames({});
         }
       })
       .catch((err) => {
         console.error("Failed to fetch chip data:", err);
-        setData([]); // On error, ensure 'data' is an empty array
-        setNames({}); // Ensure names object is reset
+        setData([]);
+        setNames({});
       });
   }, []);
 
@@ -60,7 +62,12 @@ export default function SettingsPage() {
       });
 
       const result = await res.json();
-      alert(res.ok ? `✅ Name updated: ${newName}` : `❌ Error: ${result.message}`);
+      if (res.ok) { // Check if the API call was successful
+        alert(`✅ Name updated: ${newName}`);
+        router.refresh(); // <--- Call router.refresh() here after a successful update
+      } else {
+        alert(`❌ Error: ${result.message}`);
+      }
     } catch (err) {
       console.error(err);
       alert("🚨 Failed to update name");
@@ -71,8 +78,7 @@ export default function SettingsPage() {
 
   return (
     <main className="p-6 bg-green-50 min-h-screen text-black">
-      {/* Changed the text content of the h1 tag here */}
-      <h1 className="text-3xl font-bold mb-6">Chip Name Configuration</h1> 
+      <h1 className="text-3xl font-bold mb-6">Chip Name Configuration</h1>
 
       <div className="overflow-x-auto">
         <table className="min-w-full border border-gray-300 rounded-lg bg-white text-black text-left">
