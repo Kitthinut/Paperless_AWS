@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type ChipData = {
   chip_id: string;
@@ -19,28 +19,22 @@ export default function ChipList({ data }: { data: ChipData[] }) {
     );
   }
 
-  // Group logs by chip_id
+  // Group entries by chip_id
   const grouped = data.reduce((acc, item) => {
     if (!acc[item.chip_id]) acc[item.chip_id] = [];
     acc[item.chip_id].push(item);
     return acc;
   }, {} as Record<string, ChipData[]>);
 
-  // Delete handler placeholder
+  // Handler: Delete log entry
   const handleDeleteItem = (chipId: string, timestamp: number) => {
-    if (
-      window.confirm(
-        `Are you sure you want to delete this log entry for ${chipId} at ${new Date(
-          timestamp
-        ).toLocaleString()}?`
-      )
-    ) {
+    if (window.confirm(`Delete log entry for ${chipId} at ${new Date(timestamp).toLocaleString()}?`)) {
       console.log(`Deleting item: ChipID=${chipId}, Timestamp=${timestamp}`);
       alert("Delete functionality not yet implemented.");
     }
   };
 
-  // Export PDF handler placeholder
+  // Handler: Export log entry to PDF
   const handleExportToPDF = (chipId: string, timestamp: number) => {
     console.log(`Exporting to PDF: ChipID=${chipId}, Timestamp=${timestamp}`);
     alert("Export to PDF functionality not yet implemented.");
@@ -54,15 +48,17 @@ export default function ChipList({ data }: { data: ChipData[] }) {
         </p>
       ) : (
         Object.entries(grouped).map(([chip_id, entries]) => {
-          // Use the 'name' from the first entry, fallback to chip_id
-          const chipName =
-            entries[0]?.name && !entries[0].name.startsWith("Unknown Chip (")
-              ? entries[0].name
-              : chip_id;
+          const rawName = entries[0]?.name?.trim() || "";
+          const chipName = rawName && !rawName.startsWith("Unknown Chip (")
+            ? rawName
+            : `Unknown Chip (${chip_id})`;
 
-          // Format possessive form of chip name correctly
           const formattedTitle =
             chipName + (chipName.endsWith("s") ? "'" : "'s") + " Table";
+
+          // Debug output
+          console.log(`Rendering chip table for ${chip_id} → name: ${chipName}`);
+          console.log(entries);
 
           return (
             <div
@@ -84,19 +80,8 @@ export default function ChipList({ data }: { data: ChipData[] }) {
                     {entries.map((entry, i) => {
                       const date = new Date(entry.timestamp);
                       const BECYear = date.getFullYear() + 543;
-                      const formattedDate = `${date
-                        .getDate()
-                        .toString()
-                        .padStart(2, "0")}/${(date.getMonth() + 1)
-                        .toString()
-                        .padStart(2, "0")}/${BECYear}`;
-                      const formattedTime = `${date
-                        .getHours()
-                        .toString()
-                        .padStart(2, "0")}:${date
-                        .getMinutes()
-                        .toString()
-                        .padStart(2, "0")}`;
+                      const formattedDate = `${date.getDate().toString().padStart(2, "0")}/${(date.getMonth() + 1).toString().padStart(2, "0")}/${BECYear}`;
+                      const formattedTime = `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`;
 
                       return (
                         <tr key={i} className="bg-white hover:bg-green-50">
@@ -105,17 +90,13 @@ export default function ChipList({ data }: { data: ChipData[] }) {
                           <td className="border p-2">
                             <div className="flex space-x-2">
                               <button
-                                onClick={() =>
-                                  handleDeleteItem(entry.chip_id, entry.timestamp)
-                                }
+                                onClick={() => handleDeleteItem(entry.chip_id, entry.timestamp)}
                                 className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs"
                               >
                                 Delete
                               </button>
                               <button
-                                onClick={() =>
-                                  handleExportToPDF(entry.chip_id, entry.timestamp)
-                                }
+                                onClick={() => handleExportToPDF(entry.chip_id, entry.timestamp)}
                                 className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs"
                               >
                                 Export PDF

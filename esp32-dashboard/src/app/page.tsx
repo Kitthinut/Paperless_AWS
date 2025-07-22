@@ -55,7 +55,7 @@ export default function DashboardPage() {
       const nameMap = new Map<string, string>();
       if (Array.isArray(chipNames)) {
         chipNames.forEach((chip) => {
-          nameMap.set(chip.chip_id, chip.name);
+          nameMap.set(chip.chip_id.toLowerCase(), chip.name);
         });
       }
 
@@ -63,7 +63,7 @@ export default function DashboardPage() {
       if (Array.isArray(logs)) {
         const mergedData = logs.map((log) => ({
           ...log,
-          name: nameMap.get(log.chip_id) || `Unknown Chip (${log.chip_id})`, // Use the fetched name, or a default
+          name: nameMap.get(log.chip_id.toLowerCase()) || `Unknown Chip (${log.chip_id})`,
         }));
         setData(mergedData);
         console.log("Merged Data for ChipList:", mergedData);
