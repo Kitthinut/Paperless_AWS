@@ -34,44 +34,52 @@ export default function ChipList({ data }: { data: ChipData[] }) {
 
   // Handler: Delete log entry
   const handleDeleteItem = async (chipId: string, timestamp: number) => {
-  if (
-    !window.confirm(
-      `Delete log entry for ${chipId} at ${new Date(timestamp).toLocaleString()}?`
-    )
-  ) {
-    return;
-  }
-
-  try {
-    // Call your backend API to delete the log
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/logs?chip_id=${encodeURIComponent(
-        chipId
-      )}&timestamp=${timestamp}`,
-      {
-        method: "DELETE",
-      }
-    );
-
-    if (!res.ok) {
-      const errorData = await res.json();
-      throw new Error(errorData.message || "Failed to delete log entry");
+    if (
+      !window.confirm(
+        `Are you sure you want to delete this log entry for ${chipId} at ${new Date(
+          timestamp
+        ).toLocaleString()}?`
+      )
+    ) {
+      return; // User cancelled
     }
 
-    alert("Log entry deleted successfully.");
+    try {
+      // Construct the DELETE request URL with chip_id and timestamp as query parameters
+      const deleteUrl = `${
+        process.env.NEXT_PUBLIC_API_URL
+      }/logs?chip_id=${encodeURIComponent(chipId)}&timestamp=${timestamp}`;
 
-    // Update local state by removing the deleted entry
-    setData((prevData) =>
-      prevData.filter(
-        (entry) => !(entry.chip_id === chipId && entry.timestamp === timestamp)
-      )
-    );
-  } catch (error: any) {
-    console.error("Failed to delete log entry:", error);
-    alert(`Error deleting log entry: ${error.message}`);
-  }
-};
+      const res = await fetch(deleteUrl, {
+        method: "DELETE",
+      });
 
+      if (!res.ok) {
+        // Attempt to parse error message from response body
+        const errorData = await res
+          .json()
+          .catch(() => ({ message: "Unknown error" }));
+        throw new Error(
+          errorData.message ||
+            `Failed to delete log entry. Status: ${res.status}`
+        );
+      }
+
+      alert("Log entry deleted successfully.");
+
+      // Optimistically update the UI by removing the deleted item from local state
+      setData((prevData) =>
+        prevData.filter(
+          (entry) =>
+            !(entry.chip_id === chipId && entry.timestamp === timestamp)
+        )
+      );
+
+    } catch (error: any) {
+      console.error("Failed to delete log entry:", error);
+      alert(`Error deleting log entry: ${error.message}`);
+    }
+  };
 
   // Handler: Export log entry to PDF
   const handleExportToPDF = (chipId: string, timestamp: number) => {
