@@ -5,14 +5,15 @@ import { useState } from "react";
 type ChipData = {
   chip_id: string;
   timestamp: number;
-  name?: string;
+  name?: string; // This will now come from the merged data
 };
 
 export default function ChipList({ data }: { data: ChipData[] }) {
+
   const [names, setNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState<string | null>(null);
 
-  // Group logs by chip_id
+  // Group logs by chip_id. This now inherently includes the 'name' from page.tsx data.
   const grouped = data.reduce((acc, item) => {
     if (!acc[item.chip_id]) acc[item.chip_id] = [];
     acc[item.chip_id].push(item);
@@ -41,9 +42,27 @@ export default function ChipList({ data }: { data: ChipData[] }) {
     }
   };
 
+
+  // Placeholder for delete and export functions (will be implemented in next steps)
+  const handleDeleteItem = (chipId: string, timestamp: number) => {
+      if (window.confirm(`Are you sure you want to delete this log entry for ${chipId} at ${new Date(timestamp).toLocaleString()}?`)) {
+          console.log(`Deleting item: ChipID=${chipId}, Timestamp=${timestamp}`);
+          // TO BE IMPLEMENTED: Call backend API to delete this specific log entry
+          alert("Delete functionality not yet implemented.");
+      }
+  };
+
+  const handleExportToPDF = (chipId: string, timestamp: number) => {
+      console.log(`Exporting to PDF: ChipID=${chipId}, Timestamp=${timestamp}`);
+      // TO BE IMPLEMENTED: Generate PDF or call backend for PDF
+      alert("Export to PDF functionality not yet implemented.");
+  };
+
+
   return (
     <div className="space-y-10">
       {Object.entries(grouped).map(([chip_id, entries]) => {
+        // Use the 'name' from the first entry, which should now be populated by page.tsx
         const chipName = entries[0]?.name || chip_id;
 
         return (
@@ -60,6 +79,7 @@ export default function ChipList({ data }: { data: ChipData[] }) {
                     <th className="border p-2">Date Log</th>
                     <th className="border p-2">Time Log</th>
                     <th className="border p-2">Notes</th>
+                    <th className="border p-2">Actions</th> {/* New column for actions */}
                   </tr>
                 </thead>
                 <tbody>
@@ -73,7 +93,24 @@ export default function ChipList({ data }: { data: ChipData[] }) {
                       <tr key={i} className="bg-white hover:bg-green-50">
                         <td className="border p-2">{formattedDate}</td>
                         <td className="border p-2">{formattedTime}</td>
-                        <td className="border p-2 italic text-gray-600">*add by phone*</td>
+                        {/* Remove the static text. If you have 'notes' in your data, use that here. */}
+                        <td className="border p-2">{/* entry.notes || */ ""}</td> {/* This is now empty or dynamic */}
+                        <td className="border p-2">
+                            <div className="flex space-x-2">
+                                <button
+                                    onClick={() => handleDeleteItem(entry.chip_id, entry.timestamp)}
+                                    className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs"
+                                >
+                                    Delete
+                                </button>
+                                <button
+                                    onClick={() => handleExportToPDF(entry.chip_id, entry.timestamp)}
+                                    className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs"
+                                >
+                                    Export PDF
+                                </button>
+                            </div>
+                        </td>
                       </tr>
                     );
                   })}
@@ -81,7 +118,9 @@ export default function ChipList({ data }: { data: ChipData[] }) {
               </table>
             </div>
 
-            <div className="mt-4">
+            {/* The input for updating names is commented out in your original chiplist.tsx */}
+            {/* If you want to enable it here, uncomment and ensure updateName works with re-fetching */}
+            {/* <div className="mt-4">
               <input
                 type="text"
                 placeholder="Enter custom name..."
@@ -98,7 +137,7 @@ export default function ChipList({ data }: { data: ChipData[] }) {
               >
                 {loading === chip_id ? "Saving..." : "Save Name"}
               </button>
-            </div>
+            </div> */}
           </div>
         );
       })}
