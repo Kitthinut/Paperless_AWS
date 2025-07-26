@@ -12,6 +12,7 @@ type ChipData = {
 export default function ChipList({ data }: { data: ChipData[] }) {
   const [chipData, setData] = useState<ChipData[]>(data);
   const [deleting, setDeleting] = useState<string | null>(null); // Track currently deleting item
+  const [exporting, setExporting] = useState<string | null>(null); // Track currently exporting item
 
   useEffect(() => {
     setData(data);
@@ -71,9 +72,67 @@ export default function ChipList({ data }: { data: ChipData[] }) {
     }
   };
 
-  const handleExportToPDF = (chipId: string, timestamp: number) => {
-    console.log(`Exporting to PDF: ChipID=${chipId}, Timestamp=${timestamp}`);
-    alert("Export to PDF functionality not yet implemented.");
+  // Function to handle PDF export
+  const handleExportToPDF = async (chipId: string, timestamp: number) => {
+    const idKey = `${chipId}-${timestamp}`;
+    try {
+      setExporting(idKey); // Set loading state for this specific button
+
+      // Construct the URL to your new PDF export Lambda endpoint
+      const exportUrl = `${process.env.NEXT_PUBLIC_API_URL}/export-pdf?chip_id=${encodeURIComponent(chipId)}&timestamp=${timestamp}`;
+
+      const res = await fetch(exportUrl);
+
+      if (!res.ok) {
+        const errorText = await res.text(); // Get raw text to inspect
+        console.error("PDF export error response:", errorText);
+        let errorMessage = "Failed to generate PDF.";
+        try {
+            const errorJson = JSON.parse(errorText);
+            errorMessage = errorJson.message || errorMessage;
+        } catch (e) {
+            // Not a JSON error, use the raw text
+        }
+        throw new Error(errorMessage);
+      }
+
+      // Get the Blob (binary data) of the PDF
+      const pdfBlob = await res.blob();
+
+      // Create a URL for the blob
+      const url = window.URL.createObjectURL(pdfBlob);
+
+      // Create a temporary link element
+      const a = document.createElement('a');
+      a.href = url;
+
+      // Get filename from Content-Disposition header if available, otherwise default
+      const contentDisposition = res.headers.get('Content-Disposition');
+      let filename = `log_report_${chipId}_${timestamp}.pdf`;
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1];
+        }
+      }
+      a.download = filename; // Set the download filename
+
+      // Programmatically click the link to trigger the download
+      document.body.appendChild(a);
+      a.click();
+
+      // Clean up by revoking the object URL and removing the link
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      alert("PDF exported successfully!");
+
+    } catch (error: any) {
+      console.error("Failed to export PDF:", error);
+      alert(`Error exporting PDF: ${error.message}`);
+    } finally {
+      setExporting(null); // Clear loading state
+    }
   };
 
   return (
